@@ -57,6 +57,9 @@ def DownloadOutputs(runs):
   for run in runs:
     date_str = str(run[TS_PROPERTY])
     raw_output = run['RawOutput']
+    if raw_output.strip() == "":
+      print("No url found for", date_str, "| Skipping.")
+      continue
     blob_url = raw_output.replace('https://ct.skia.org/results/', 'gs://')
     download_path = os.path.join(CSV_OUTPUT_DIR, str(date_str) + '.csv')
     if pathlib.Path(download_path).exists():
