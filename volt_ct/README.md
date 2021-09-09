@@ -4,7 +4,7 @@ Requires python3.
 ```
 $ python3 -m venv volt-ct-env
 $ source volt-ct-env/bin/activate
-$ pip install -r requirements.txt # Might have some bdist_wheel errors. Ignore.
+$ pip install google-cloud-{datastore,storage}
 ```
 
 # Usage
