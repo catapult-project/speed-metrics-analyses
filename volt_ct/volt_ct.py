@@ -10,6 +10,28 @@ CSV_OUTPUT_DIR = 'csv-outputs'
 MAX_QUERY_LIMIT = 300
 TS_PROPERTY = 'TsCompleted'
 
+# Map of original column names -> modified column names.
+COLUMN_MAP = {
+  'traceUrls': 'trace',
+  'timeToFirstContentfulPaint (ms)': 'FCP',
+  'totalBlockingTime (ms)': 'TBT',
+  'largestContentfulPaint (ms)': 'LCP',
+  'mainFrameCumulativeLayoutShift': 'CLS',
+}
+
+FINAL_FIELDS = ('url trace run_date_str FCP TBT CLS LCP').split(' ')
+
+
+def CleanRow(input_row):
+  output_row = {
+    'url': input_row['page_name'].split(' ')[0],
+    'run_date_str': input_row['run_date_str']
+  }
+  for (input_col, output_col) in COLUMN_MAP.items():
+    # .get because sometimes a column is missing in older CSVs.
+    output_row[output_col] = input_row.get(input_col, None)
+  return output_row
+
 
 def DateStingToCtTime(date_str):
   """Converts yyyy-mm-dd string to yyyymmddhhmmss int.
@@ -92,11 +114,12 @@ def AddDateAndMergeCsvs(merged_filename, since_str):
       for row in reader:
         row['ct_raw_ts_completed'] = date_int
         row['run_date_str'] = CtTimeToDateString(date_int)
-        all_rows.append(row)
+        cleaned_row = CleanRow(row)
+        all_rows.append(cleaned_row)
       all_fields.update(reader.fieldnames)
 
   with open(merged_filename, 'w') as f:
-    writer = csv.DictWriter(f, all_fields)
+    writer = csv.DictWriter(f, FINAL_FIELDS)
     writer.writeheader()
     writer.writerows(all_rows)
     print(f'Processed {files_processed} files.')
