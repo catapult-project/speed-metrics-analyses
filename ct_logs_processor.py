@@ -35,7 +35,7 @@ class TraceUrlMismatch(Exception):
   def __init__(self, expected_url, found_url, metric_name, run_index):
     print("Expected", expected_url)
     print("but found")
-    print(trace_url)
+    print(found_url)
     print("Metric:", metric_name)
     print("Storyset repeat: ", run_index)
 
