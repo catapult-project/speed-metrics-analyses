@@ -102,6 +102,10 @@ def get_run_results(ct_histograms, generate_run_index=False):
     if int(histogram['count']) < 1: continue
 
     metric_name = histogram['name']
+
+    # Only care about FCP for now
+    if metric_name != "timeToFirstContentfulPaint": continue
+
     # Stories can be like "https://google.com (#12)".
     # Strip the story number at the end.
     url = histogram['stories'].split("(")[0].strip()
@@ -151,7 +155,7 @@ def transform_single_file(args):
 
   for input_file in args.input_files:
     print("Processing " + input_file)
-    basename, _ = os.path.splitext(input_file)
+    basename, _ = os.path.splitext(os.path.basename(input_file))
     output_file = os.path.join(args.outdir, basename + ".csv")
     results = get_run_results(get_histograms(input_file),
                               generate_run_index=args.generate_run_index)
@@ -163,6 +167,10 @@ def transform_single_file(args):
 
 def transform_and_merge(args):
   out_filename = args.merge
+  out_dirname = os.path.dirname(out_filename)
+  if not os.path.exists(out_dirname):
+    os.makedirs(out_dirname, mode=0o755)
+
   all_results = []
 
   for input_file in args.input_files:
