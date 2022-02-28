@@ -1,3 +1,4 @@
+from google_auth_oauthlib import flow
 from google.cloud import datastore
 from google.cloud import storage
 
@@ -5,6 +6,24 @@ import argparse
 import csv
 import os
 import pathlib
+
+VAR_NAME = 'VOLT_CT_CLIENT_SECRETS'
+secrets_path = os.environ.get(VAR_NAME)
+if secrets_path is None:
+  raise Exception(f'Must set {VAR_NAME} env var')
+
+scopes = [
+  "https://www.googleapis.com/auth/bigquery",  # TODO: Delete.
+  "https://www.googleapis.com/auth/datastore",
+  "https://www.googleapis.com/auth/devstorage.read_only",
+]
+
+appflow = flow.InstalledAppFlow.from_client_secrets_file(
+    secrets_path, scopes=scopes
+)
+
+appflow.run_local_server()
+credentials = appflow.credentials
 
 CSV_OUTPUT_DIR = 'csv-outputs'
 MAX_QUERY_LIMIT = 1000
@@ -20,7 +39,6 @@ COLUMN_MAP = {
 }
 
 FINAL_FIELDS = ('url trace run_date_str FCP TBT CLS LCP').split(' ')
-
 
 def CleanRow(input_row):
   output_row = {
@@ -49,10 +67,11 @@ def DateStingToCtTime(date_str):
   return int(f'{year}{month}{day}000000')
 
 
-def GetAllVoltRuns(since_str):
-  client = datastore.Client(project='skia-public', namespace='cluster-telemetry')
+def GetAllVoltRuns(since_str, group_name):
+  client = datastore.Client(project='skia-public',
+      namespace='cluster-telemetry', credentials=credentials)
   query = client.query(kind='ChromiumAnalysisTasks')
-  query.add_filter('GroupName', '=', 'volt10k-m80')
+  query.add_filter('GroupName', '=', group_name)
   since_int = DateStingToCtTime(since_str)
 
   for res in query.fetch(limit=MAX_QUERY_LIMIT):
@@ -75,7 +94,9 @@ def CtTimeToDateString(ct_time):
 def DownloadOutputs(runs):
   # TODO: Add a directory.
   pathlib.Path(CSV_OUTPUT_DIR).mkdir(exist_ok=True)
-  storage_client = storage.Client()
+  storage_client = storage.Client(
+      project='chrome-speed-metrics-analysis',
+      credentials=credentials)
   for run in runs:
     date_str = str(run[TS_PROPERTY])
     raw_output = run['RawOutput']
@@ -128,12 +149,14 @@ def AddDateAndMergeCsvs(merged_filename, since_str):
 
 def Main():
   parser = argparse.ArgumentParser(description='Get output from Volt 10k CT runs')
+  parser.add_argument('group_name', type=str,
+                      help='CT runs group name to query.')
   parser.add_argument('--since', type=str,
                       help='Min date of run. In yyyy-mm-dd format.')
   parser.add_argument('--merged-filename', type=str, default='merged.csv',
                       help='Merged output filename. Default: merged.csv')
   args = parser.parse_args()
-  all_volt_runs = GetAllVoltRuns(args.since)
+  all_volt_runs = GetAllVoltRuns(args.since, args.group_name)
   DownloadOutputs(all_volt_runs)
   AddDateAndMergeCsvs(args.merged_filename, args.since)
 
