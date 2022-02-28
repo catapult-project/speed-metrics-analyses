@@ -73,7 +73,8 @@ def get_histograms(filename):
     logs = re.sub('\nI.*exec\.go\:74] ', '\n', logs)
     # Then I remove all lines that are from other log sources, for example,
     # util.go, exec.go:223 etc.
-    logs = re.sub('\nI.*?\.go\:\d+] .*?\.go\:\d+.*?(?=\n)', '\n', logs)
+    # https://regex101.com/r/ylBTnt/1
+    logs = re.sub('\n(?:E|I).*?\.go\:\d+] .*?(?=\n)', '\n', logs)
     # Then I remove all new lines.
     logs = re.sub('\n', '', logs);
 

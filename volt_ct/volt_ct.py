@@ -7,7 +7,7 @@ import os
 import pathlib
 
 CSV_OUTPUT_DIR = 'csv-outputs'
-MAX_QUERY_LIMIT = 300
+MAX_QUERY_LIMIT = 1000
 TS_PROPERTY = 'TsCompleted'
 
 # Map of original column names -> modified column names.
