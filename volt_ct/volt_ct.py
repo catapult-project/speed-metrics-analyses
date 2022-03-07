@@ -91,9 +91,10 @@ def CtTimeToDateString(ct_time):
   return f"{year}-{month}-{day}"
 
 
-def DownloadOutputs(runs):
+def DownloadOutputs(runs, group_name):
   # TODO: Add a directory.
-  pathlib.Path(CSV_OUTPUT_DIR).mkdir(exist_ok=True)
+  dir_path = os.path.join(CSV_OUTPUT_DIR, group_name)
+  pathlib.Path(dir_path).mkdir(exist_ok=True)
   storage_client = storage.Client(
       project='chrome-speed-metrics-analysis',
       credentials=credentials)
@@ -104,7 +105,7 @@ def DownloadOutputs(runs):
       print("No url found for", date_str, "| Skipping.")
       continue
     blob_url = raw_output.replace('https://ct.skia.org/results/', 'gs://')
-    download_path = os.path.join(CSV_OUTPUT_DIR, str(date_str) + '.csv')
+    download_path = os.path.join(dir_path, str(date_str) + '.csv')
     if pathlib.Path(download_path).exists():
       print(f'{download_path} already exists. Skipping download.')
       continue
@@ -113,11 +114,12 @@ def DownloadOutputs(runs):
       print('Downloaded csv to ' + download_path)
 
 
-def AddDateAndMergeCsvs(merged_filename, since_str):
+def AddDateAndMergeCsvs(merged_filename, group_name, since_str):
   # NOTE: We first accumulate all the rows because there is no guarantee
   # that every CSV will have the same field names. If memory becomes an issue
   # change this to only read the header of each file.
-  all_csvs = pathlib.Path(CSV_OUTPUT_DIR).glob('*')
+  dir_path = os.path.join(CSV_OUTPUT_DIR, group_name)
+  all_csvs = pathlib.Path(dir_path).glob('*')
   all_fields = {'ct_raw_ts_completed', 'run_date_str'}
   all_rows = []
   since_int = DateStingToCtTime(since_str)
@@ -157,8 +159,8 @@ def Main():
                       help='Merged output filename. Default: merged.csv')
   args = parser.parse_args()
   all_volt_runs = GetAllVoltRuns(args.since, args.group_name)
-  DownloadOutputs(all_volt_runs)
-  AddDateAndMergeCsvs(args.merged_filename, args.since)
+  DownloadOutputs(all_volt_runs, args.group_name)
+  AddDateAndMergeCsvs(args.merged_filename, args.group_name, args.since)
 
 
 if __name__ == "__main__":
